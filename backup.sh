@@ -1,3 +1,4 @@
+#!/bin/bash
 [[ $(id -u) -eq 0 ]] || { echo "Superuser privilage required." ; exit 1; };
 
 #Filesystem UUID of external device
