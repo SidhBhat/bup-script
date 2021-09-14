@@ -58,7 +58,7 @@ while true; do
 		shift
 		[ -d "$1" ] && {
 			spath="$1"
-		} ||  { echo -e "\e[31mError\e[0m: directory \"$1\" is does not exist" 1>&2; exit 1; }
+		} ||  { echo -e "\e[31mError\e[0m: directory \"$1\" does not exist" 1>&2; exit 1; }
 		shift
 		;;
 	  -u | --unmount)
@@ -119,7 +119,7 @@ mntpt=$(expand_link "$mntpt")
 path=$(expand_link "$path")
 spath=$(expand_link "$spath")
 
-[ -z "$path" ] && [ "$(printf "$path" | tr -s '/' | awk -F '/' '{ print $2 }')" == "home" ] &&
+[ -n "$path" ] && [ "$(printf "$path" | tr -s '/' | awk -F '/' '{ print $2 }')" != "home" ] &&
 	echo -e "\e[31mError\e[0m: For safty reasons backup cannot be stored in system directories" 1>&2 &&
 	exit 1;
 
