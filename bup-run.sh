@@ -236,14 +236,14 @@ function restore_msg {
 }
 
 function backup { #arg1 == directory to backup, arg2 == directory to store backup
-	local dir="Backup-$(date +'%B-%Y')"
+	local dir="Backup-$(date +'%Y')"
 	[ -d "$2" ] && BUP_DIR="$2" || return 1;
 	message "Backup Script" "Backup Started"
-	[ -d "$BUP_DIR/$dir" ] || { $exec_as_user mkdir "$BUP_DIR/$dir"; $exec_as_user bup -d "$BUP_DIR/$dir" init; } || exit 100
+	[ -d "$BUP_DIR/$dir" ] || { $exec_as_user mkdir "$BUP_DIR/$dir"; $exec_as_user bup -d "$BUP_DIR/$dir" init 2>/dev/null; } || exit 100
 	[ -d "$1" ] &&
 	  { echo -e "\e[34mIndexing....\e[0m"; $exec_as_user bup -d "$BUP_DIR/$dir" index -ux "$1" || exit 101; } || return 2;
 	echo -e "\e[34mBacking up....\e[0m"
-	$exec_as_user bup -d "$BUP_DIR/$dir" save -c --name "$(date +'bup-%Y')" "$1" || exit 102
+	$exec_as_user bup -d "$BUP_DIR/$dir" save -c --name "$(date +'bup-%B-%Y')" "$1" || exit 102
 	printf "bup " > "$BUP_DIR/$dir/"version.txt &&  bup --version >> "$BUP_DIR/$dir/"version.txt
 	git --version >> "$BUP_DIR/$dir/"version.txt
 	restore_msg > "$BUP_DIR/$dir/"restore.txt
