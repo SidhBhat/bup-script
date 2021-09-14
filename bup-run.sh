@@ -1,5 +1,5 @@
  #!/bin/bash
-options=$(getopt -o hDum:t:d: --long help,debug,mountpoint:,report:,user:,unmount,target-dir:,dir:,directory: -- "$@")
+options=$(getopt -o hDum:t:d: --long help,debug,mountpoint:,report:,user:,unmount,target-dir:,dir:,directory:,prompt:: -- "$@")
 [ $? -eq 0 ] || {
 	echo -e "\e[1;31mUnexpected Error\e[0m terminating...."
 	exit 3
@@ -17,6 +17,7 @@ function set_zero() {
 	debug=0
 	user=""
 	reportuser=""
+	prompt=""
 }
 set_zero
 
@@ -85,6 +86,13 @@ while true; do
 		  { echo -e "\e[31mError\e[0m: Current User must be root to execute as \"$1\"" 1>&2; exit 1; };
 		shift
 		;;
+	  --prompt)
+		shift
+		[ "$1" == "gui" ] && prompt="gui" || { [ "$1" == "cli" ] || [ "$1" == "tui" ] && prompt="tui"; } && shift || {
+			{ [ -n "$1" ] && { [ "${1:0:1}" == "-" ] || [ "${1:0:2}" == "--" ]; }; } && { echo -e "\e[31mError\e[0m: must specify \"gui\" \"tui\" or \"cli\" after --prompt" 1>&2; exit 1; };
+			prompt="tui"
+		};
+		;;
 	  --)
 		shift
 		break
@@ -97,8 +105,8 @@ if [ -b "$1" ]; then
 	mode=2
 elif [ -d "$1" ]; then
 	[ -n "$mntpt" ] && {
-		echo -e "\e[31mError\e[0m: mountpoint specified for non-block device" 1>&2
-		exit 2
+		echo -e "\e[31mError\e[0m: mountpoint specified for non-block device" 1>&2;
+		exit 2;
 	}
 	path="$1"
 	mode=1
@@ -115,15 +123,51 @@ function expand_link {
 [ -z "$spath" ] && spath=./
 [ -z "$tardir" ] && tardir=bup
 
-mntpt=$(expand_link "$mntpt")
-path=$(expand_link "$path")
-spath=$(expand_link "$spath")
+mntpt="$(expand_link "$mntpt")"
+path="$(expand_link "$path")"
+spath="$(expand_link "$spath")"
 
-[ -n "$path" ] && [ "$(printf "$path" | tr -s '/' | awk -F '/' '{ print $2 }')" != "home" ] &&
-	echo -e "\e[31mError\e[0m: For safty reasons backup cannot be stored in system directories" 1>&2 &&
-	exit 1;
+[ -n "$path" ] && [ "$(printf "$path" | tr -s '/' | awk -F '/' '{ print $2 }')" != "home" ] && {
+		echo -e "\e[31mError\e[0m: For safty reasons backup cannot be stored in system directories" 1>&2;
+		exit 1;
+	}
 
 [ -n "$user" ] && exec_as_user="sudo -nu $user"
+
+if [ -n "$prompt" ]; then
+	if [ "$prompt" == "tui" ]; then
+		[ $mode -eq 1 ] &&
+			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')" ||
+		[ $mode -eq 2 ] &&
+			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')" ||
+		{ echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1; };
+		read tmpvar;
+		while [ "$tmpvar" != "y" ] || [ "$tmpvar" != "n" ]; do
+				printf "please enter 'y' or 'n' :"
+				read tmpvar
+		done;
+		[ "$tmpvar" == "n" ] && exit 0 || unset tmpvar;
+	elif [ "$prompt" == "gui" ]; then
+		[ $mode -eq 1 ] &&
+			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')")" ||
+		[ $mode -eq 2 ] &&
+			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')")" ||
+		{ echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1; };
+		[ -n "$reportuser" ] && xdg_runtime_dir="/run/user/$(id -u "$reportuser")" || xdg_runtime_dir="run/user/$(id -u)"
+		[ -d "$xdg_runtime_dir" ] || { echo -e "\e[31mError\e[0m: xdg runtime directory not found"; exit 1; };
+		if [ -n "$reportuser" ]; then
+			sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_runtime_dir" kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg"
+			retcode=$?
+		else
+			env XDG_RUNTIME_DIR="$xdg_runtime_dir" kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg.\npress continue to start backup."
+			retcode=$?
+		fi
+		[ $retcode -nt 0 ] && exit 2;
+		unset retcode
+		unset xdg_runtime_dir
+		unset strmsg
+	fi
+fi
 
 function message {
 	#[ -z "$reportuser" ] && { kdialog --title "$1" --passivepopup "$2" 5; return $?; };
