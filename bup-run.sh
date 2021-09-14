@@ -15,6 +15,8 @@ function set_zero() {
 	mntpt=""
 	spath=""
 	debug=0
+	user=""
+	reportuser=""
 }
 set_zero
 
@@ -101,7 +103,7 @@ mntpt=$(expand_link "$mntpt")
 path=$(expand_link "$path")
 spath=$(expand_link "$spath")
 
-[ -z "$path" ] && [ "$(printf "$path" | tr -s '/' | awk -F '/' '{ print $2 }')" = "home" ] &&
+[ -z "$path" ] && [ "$(printf "$path" | tr -s '/' | awk -F '/' '{ print $2 }')" == "home" ] &&
 	echo -e "\e[31mError\e[0m: For safty reasons backup cannot be stored in system directories" 1>&2 &&
 	exit 1;
 
@@ -192,7 +194,7 @@ case $mode in
 		uuid=$(lsblk -lpno NAME,UUID | grep -w "$dev" | awk '{ print $NF }')
 		[ -z "$uuid" ] && { echo -e "\e[31mError :\e[0m No filesystem detected on $dev" 1>&2; exit 1; };
 		[ -d  "$path/$tardir" ] || { mkdir -p "$path/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to make directory \"$path/$tardir\"" 1>&2; exit 1; };
-		[ -n "$user" ] && { chown "$user":"$user" "$path/$tardir" && chmod u+w,g+rx "$path/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to set permissions for directory \"$path/$tardir\"" 1>&2; exit 1; };
+		[ -n "$user" ] && { { chown "$user":"$user" "$path/$tardir" && chmod u+w,g+rx "$path/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to set permissions for directory \"$path/$tardir\"" 1>&2; exit 1; }; };
 		backup "$spath" "$path/$tardir"; tmp=$?
 		[ $tmp -eq 0 ] || { echo -e "\e[31mError :\e[0m During Backup" 1>&2; exit 1; };
 		;;
@@ -202,7 +204,7 @@ case $mode in
 		mount_dev "$uuid" "$mntpt"; tmp=$?
 		[ $tmp -eq 0 ] || { echo -e "\e[31mError :\e[0m Mounting device" 1>&2; exit $tmp; };
 		[ -d  "$mntpt/$tardir" ] || { mkdir -p "$mntpt/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to make directory \"$mntpt/$tardir\"" 1>&2; exit 1; };
-		[ -n "$user" ] && { chown "$user":"$user" "$mntpt/$tardir" && chmod u+w,g+rx "$mntpt/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to set permissions for directory \"$mntpt/$tardir\"" 1>&2; exit 1; };
+		[ -n "$user" ] && { { chown "$user":"$user" "$mntpt/$tardir" && chmod u+w,g+rx "$mntpt/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to set permissions for directory \"$mntpt/$tardir\"" 1>&2; exit 1; }; };
 		backup "$spath" "$mntpt/$tardir"; tmp=$?
 		[ $tmp -eq 0 ] || { echo -e "\e[31mError :\e[0m During Backup" 1>&2; exit 1; };
 		[ $umnt -eq 1 ] && { sleep 1; umount_dev; tmp=$?;
