@@ -23,7 +23,22 @@ set_zero
 while true; do
 	case "$1" in
 	   -h | --help)
-		echo "work in progress"
+		echo -e "Usage:\n\t$0 [short-option <arg> ] [long-option <arg>] <backup location>\n"
+		echo -e "Script to backup a entire directory (unfortunatly backups of directories are only supported)\n"
+		echo "Options:"
+		echo -e "  -h, --help\t\t\tDisplay this message"
+		echo -e "  -d <dir>, --directory=<dir>\tDirectory to backup (defualt './')"
+		echo -e "  -t <dir>, --target-dir=<dir>\tBackup folder(s) starting at the <backup location>"
+		echo -e "\t\t\t\t  This directory is specified as an absolute path"
+		echo -e "\t\t\t\t  The path is then built under the \"backup location\" (defualt 'bup/')"
+		echo -e "  -m <dir>, --mountpoint=<dir>\tIf \"backup location\" is a block device (partition or external device)"
+		echo -e "\t\t\t\t  this is the directory to mount it at (it must exist) (defualt '/mnt')"
+		echo -e "  -u, --unmount\t\t\tIf \"backup location\" is a block device (partition or external device)"
+		echo -e "\t\t\t\t  Unmount after backing up"
+		echo -e "  -D, --debugt\t\t\tPrint Debugging information and exit"
+		echo -e "  --report=<user>\t\tDisplay a graphical popup at a sesstion of <user>"
+		echo -e "\t\t\t\t  during and after backup is complete(useful if running in background)"
+		echo -e "  --user=<user>\t\t\tbackup as <user> (requires superuser previlages)"
 		exit 0
 		shift
 		;;
