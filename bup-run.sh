@@ -229,10 +229,21 @@ function umount_dev {
 
 function restore_msg {
 	echo "restore command:"
-	echo "bup -d <location of backup> restore [ --outdir=<dir to restore to(must be empty)>] <path to backup version>"
+	echo -e "bup -d <location of backup> restore [ --outdir=<dir to restore to(must be empty)>] <path to backup version>/path/to/file-or-directory\n"
 	echo "'path to backup version' is the bath to the backup as found by 'bup ls'"
-	echo "basically it is 'bup-<month>-<year>/date/\"fully quallified path to saved directory\""
+	echo "        basically it is 'bup-<month>-<year>/date/\"fully quallified path to saved directory\""
 	echo "if 'path to backup version' is followed by a trailng '/' then the contents of the directory is restored directly in outdir"
+	echo "if outdir is ommited it is assumed to be current dir"
+	echo "see 'bup restore --help' for details"
+	echo
+	echo "travese backup:"
+	echo "bup -d <location of backup> ls [options] <path to backup>/path/to/file"
+	echo "options similar to ls may be given"
+	echo
+	echo "fuse mount:"
+	echo "bup -d <location to backup> fuse [-d] [-f] [-o] [-v]"
+	echo "recommended options '-d -v' "
+	echo "see 'bup fuse --help' for details"
 }
 
 function backup { #arg1 == directory to backup, arg2 == directory to store backup
