@@ -1,11 +1,12 @@
  #!/bin/bash
-options=$(getopt -o hDum:t:d: --long help,debug,mountpoint:,report:,user:,unmount,target-dir:,dir:,directory:,prompt:: -- "$@")
+options=$(getopt -o hDum:t:d: --long help,debug,mountpoint:,report:,user:,unmount,target-dir:,dir:,directory:,prompt: -- "$@")
 [ $? -eq 0 ] || {
 	echo -e "\e[1;31mUnexpected Error\e[0m terminating...."
 	exit 3
 }
 eval set -- $options
-
+#echo $@
+#exit 8
 function set_zero() {
 	mode=0
 	umnt=0
@@ -88,10 +89,8 @@ while true; do
 		;;
 	  --prompt)
 		shift
-		[ "$1" == "gui" ] && prompt="gui" || { [ "$1" == "cli" ] || [ "$1" == "tui" ] && prompt="tui"; } && shift || {
-			{ [ -n "$1" ] && { [ "${1:0:1}" == "-" ] || [ "${1:0:2}" == "--" ]; }; } && { echo -e "\e[31mError\e[0m: must specify \"gui\" \"tui\" or \"cli\" after --prompt" 1>&2; exit 1; };
-			prompt="tui"
-		};
+		[ "$1" == "gui" ] && prompt="gui" || { [ "$1" == "cli" ] || [ "$1" == "tui" ] && prompt="tui"; } && shift || { 
+			echo "\e[31mError\e[0m:Unrecognized prompt option \"$1\""; exit 1; };
 		;;
 	  --)
 		shift
@@ -142,11 +141,11 @@ if [ -n "$prompt" ]; then
 			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')" ||
 		{ echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1; };
 		read tmpvar;
-		while [ "$tmpvar" != "y" ] || [ "$tmpvar" != "n" ]; do
+		while [ "$tmpvar" != "y" ] && [ "$tmpvar" != "n" ]; do
 				printf "please enter 'y' or 'n' :"
 				read tmpvar
 		done;
-		[ "$tmpvar" == "n" ] && exit 0 || unset tmpvar;
+		[ "$tmpvar" == "n" ] && exit 2 || unset tmpvar;
 	elif [ "$prompt" == "gui" ]; then
 		[ $mode -eq 1 ] &&
 			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')")" ||
@@ -162,7 +161,8 @@ if [ -n "$prompt" ]; then
 			env XDG_RUNTIME_DIR="$xdg_runtime_dir" kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg.\npress continue to start backup."
 			retcode=$?
 		fi
-		[ $retcode -nt 0 ] && exit 2;
+		[ $retcode -ne 0 ] && exit 2;
+
 		unset retcode
 		unset xdg_runtime_dir
 		unset strmsg
