@@ -60,6 +60,7 @@ while true; do
 		tmp=$(id -u)
 		[ $((tmp)) -eq 0 ] || [ $tmp -eq $(($(id -u "$1"))) ] && reportuser="$(id -nu "$1")" ||
 		  { echo -e "\e[31mError\e[0m: Current User must be root to report to \"$1\"" 1>&2; exit 1; };
+		[ -d "/run/user/$(id -u "$reportuser")" ] || { echo -e "\e[31mError\e[0m: Cannot find \"xdg_runtime_dir\" for \"$reportuser\"" 1>&2; exit 1; };
 		shift
 		;;
 	  --user)
