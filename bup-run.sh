@@ -190,7 +190,7 @@ function restore_msg {
 }
 
 function backup { #arg1 == directory to backup, arg2 == directory to store backup
-	local dir="Backup-$(date +'%Y')"
+	local dir="Backup-$(date +'%B-%Y')"
 	[ -d "$2" ] && BUP_DIR="$2" || return 1;
 	message "Backup Script" "Backup Started"
 	[ -d "$BUP_DIR/$dir" ] || { $exec_as_user mkdir "$BUP_DIR/$dir"; $exec_as_user bup -d "$BUP_DIR/$dir" init; } || exit 100
