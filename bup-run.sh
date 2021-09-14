@@ -37,10 +37,12 @@ while true; do
 		echo -e "\t\t\t\t  this is the directory to mount it at (it must exist) (defualt '/mnt')"
 		echo -e "  -u, --unmount\t\t\tIf \"backup location\" is a block device (partition or external device)"
 		echo -e "\t\t\t\t  Unmount after backing up"
-		echo -e "  -D, --debugt\t\t\tPrint Debugging information and exit"
+		echo -e "  -D, --debug\t\t\tPrint Debugging information and exit"
 		echo -e "  --report=<user>\t\tDisplay a graphical popup at a sesstion of <user>"
 		echo -e "\t\t\t\t  during and after backup is complete(useful if running in background)"
 		echo -e "  --user=<user>\t\t\tbackup as <user> (requires superuser previlages)"
+		echo -e "  --prompt=<option>\t\tConfirm before backing up"
+		echo -e "\t\t\t\t  The available options are \"gui\" and \"tui\" or \"cli\""
 		exit 0
 		shift
 		;;
@@ -89,7 +91,7 @@ while true; do
 		;;
 	  --prompt)
 		shift
-		[ "$1" == "gui" ] && prompt="gui" || { [ "$1" == "cli" ] || [ "$1" == "tui" ] && prompt="tui"; } && shift || { 
+		[ "$1" == "gui" ] && prompt="gui" || { [ "$1" == "cli" ] || [ "$1" == "tui" ] && prompt="tui"; } && shift || {
 			echo "\e[31mError\e[0m:Unrecognized prompt option \"$1\""; exit 1; };
 		;;
 	  --)
@@ -229,7 +231,7 @@ function restore_msg {
 	echo "restore command:"
 	echo "bup -d <location of backup> restore [ --outdir=<dir to restore to(must be empty)>] <path to backup version>"
 	echo "'path to backup version' is the bath to the backup as found by 'bup ls'"
-	echo "basically it is 'bup-<year>/date/\"fully quallified path to saved directory\""
+	echo "basically it is 'bup-<month>-<year>/date/\"fully quallified path to saved directory\""
 	echo "if 'path to backup version' is followed by a trailng '/' then the contents of the directory is restored directly in outdir"
 }
 
