@@ -1,6 +1,10 @@
 #!/bin/bash
 
-#[[ $(id -u) -eq 0 ]] || { echo "Superuser privilage required." ; exit 1; };
+[[ $(id -u) -eq 0 ]] && {
+	echo "This script is not optimised to run as root, Doing so will currupt repository" 1>&2 ;
+	echo "Aborting.., Use backup-root.sh instead" 1>&2;
+	exit 1;
+};
 #please keep same configuration as backup-root.sh
 #this script is optimised to be run non interactive
 #for this script to work;
@@ -23,9 +27,9 @@ mountpoint="/home/backup"
 #directory where bachup should be stored. cannot be empty
 dir="backup"
 # specify true if a gui prompt is required at the end of backup
-gui="false"
+gui="true"
 # display backup status? specify "true" for yes. display 0 must be active.
-status_report="false"
+status_report="true"
 
 #configuratuin end
 
