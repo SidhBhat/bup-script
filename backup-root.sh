@@ -48,7 +48,8 @@ fi
 [ $code -ne 0 ] && {
 	echo "non zero exit code : $code" 1>&2;
 	if [ "$gui" == "true" ]; then
-		sudo -u "$user" env DISPLAY=":0" XDG_RUNTIME_DIR="/run/user/$(id -u "$user")" kdialog --title "Backup Script" --sorry \
+		sudo -nu "$user" env DISPLAY=":0" XDG_RUNTIME_DIR="/run/user/$(id -u "$user")" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
+			kdialog --title "Backup Script" --sorry \
 			"Script returned with non zero exit status $code\nPlease check \"/tmp/backup-script-error.log\" for details." &
 		chown "$user":"$user" /tmp/backup-script-error.log;
 		chmod a+r /tmp/backup-script-error.log;
