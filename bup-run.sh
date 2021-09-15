@@ -133,8 +133,10 @@ spath="$(expand_link "$spath")"
 		exit 1;
 	}
 
-[ -n "$user" ] && exec_as_user="sudo -nu $user"
-[ -n "$user" ] && exec_backup="$exec_as_user env -C $($exec_as_user bash -c 'printf "%s" "$HOME"')"
+[ -n "$user" ] && {
+	exec_as_user="sudo -nu $user";
+	exec_backup="$exec_as_user env -C $($exec_as_user bash -c 'printf "%s" "$HOME"')";
+};
 
 if [ -n "$prompt" ]; then
 	if [ "$prompt" == "tui" ]; then
