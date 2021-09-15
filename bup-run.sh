@@ -134,14 +134,17 @@ spath="$(expand_link "$spath")"
 	}
 
 [ -n "$user" ] && exec_as_user="sudo -nu $user"
+[ -n "$user" ] && exec_backup="$exec_as_user env -C $($exec_as_user bash -c 'printf "%s" "$HOME"')"
 
 if [ -n "$prompt" ]; then
 	if [ "$prompt" == "tui" ]; then
-		[ $mode -eq 1 ] &&
-			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')" ||
-		[ $mode -eq 2 ] &&
-			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')" ||
-		{ echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1; };
+		if [ $mode -eq 1 ]; then
+			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')"
+		elif [ $mode -eq 2 ]; then
+			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')"
+		else
+			echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1;
+		fi
 		read tmpvar;
 		while [ "$tmpvar" != "y" ] && [ "$tmpvar" != "n" ]; do
 				printf "please enter 'y' or 'n' :"
@@ -149,11 +152,13 @@ if [ -n "$prompt" ]; then
 		done;
 		[ "$tmpvar" == "n" ] && exit 2 || unset tmpvar;
 	elif [ "$prompt" == "gui" ]; then
-		[ $mode -eq 1 ] &&
-			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')")" ||
-		[ $mode -eq 2 ] &&
-			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')")" ||
-		{ echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1; };
+		if [ $mode -eq 1 ]; then
+			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')")"
+		elif [ $mode -eq 2 ]; then
+			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')")"
+		else
+			echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1;
+		fi
 		[ -n "$reportuser" ] && xdg_runtime_dir="/run/user/$(id -u "$reportuser")" || xdg_runtime_dir="run/user/$(id -u)"
 		[ -d "$xdg_runtime_dir" ] || { echo -e "\e[31mError\e[0m: xdg runtime directory not found"; exit 1; };
 		if [ -n "$reportuser" ]; then
@@ -171,18 +176,16 @@ if [ -n "$prompt" ]; then
 	fi
 fi
 
-function message {
-	#[ -z "$reportuser" ] && { kdialog --title "$1" --passivepopup "$2" 5; return $?; };
-	#sudo -nu "$reportuser" bash -c 'env XAUTHORITY=$XAUTHORITY DISPLAY=$DISPLAY dbus-launch kdialog --title "$1" --passivepopup "$2" 5'
-	#sudo -E -nuu "$reportuser" bash -c ' echo $XDG_RUNTIME_DIR'
-	[ -n "$reportuser" ] && {
+if [ -n "$reportuser" ]; then
+	function message {
 		local xdg_dir="/run/user/$(id -u "$reportuser")";
 		sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_dir" kdialog --title "$1" --passivepopup "$2" 10 &
-	} || {
-		local xdg_dir="/run/user/$(id -u)";
-		env XDG_RUNTIME_DIR="$xdg_dir" kdialog --title "$1" --passivepopup "$2" 10 &
-	};
-}
+	}
+else
+	function message {
+		true;
+	}
+fi
 
 
 if [ $debug -eq 1 ]; then
@@ -250,11 +253,11 @@ function backup { #arg1 == directory to backup, arg2 == directory to store backu
 	local dir="Backup-$(date +'%Y')"
 	[ -d "$2" ] && BUP_DIR="$2" || return 1;
 	message "Backup Script" "Backup Started"
-	[ -d "$BUP_DIR/$dir" ] || { $exec_as_user mkdir "$BUP_DIR/$dir"; $exec_as_user bup -d "$BUP_DIR/$dir" init 2>/dev/null; } || exit 100
+	[ -d "$BUP_DIR/$dir" ] || { $exec_as_user mkdir "$BUP_DIR/$dir"; $exec_backup bup -d "$BUP_DIR/$dir" init 2>/dev/null; } || exit 100
 	[ -d "$1" ] &&
-	  { echo -e "\e[34mIndexing....\e[0m"; $exec_as_user bup -d "$BUP_DIR/$dir" index -ux "$1" || exit 101; } || return 2;
+	  { echo -e "\e[34mIndexing....\e[0m"; $exec_backup bup -d "$BUP_DIR/$dir" index -ux "$1" || exit 101; } || return 2;
 	echo -e "\e[34mBacking up....\e[0m"
-	$exec_as_user bup -d "$BUP_DIR/$dir" save -c --name "$(date +'bup-%B-%Y')" "$1" || exit 102
+	$exec_backup bup -d "$BUP_DIR/$dir" save -c --name "$(date +'bup-%B-%Y')" "$1" || exit 102
 	printf "bup " > "$BUP_DIR/$dir/"version.txt &&  bup --version >> "$BUP_DIR/$dir/"version.txt
 	git --version >> "$BUP_DIR/$dir/"version.txt
 	restore_msg > "$BUP_DIR/$dir/"restore.txt
@@ -267,7 +270,7 @@ case $mode in
 		uuid=$(lsblk -lpno NAME,UUID | grep -w "$dev" | awk '{ print $NF }')
 		[ -z "$uuid" ] && { echo -e "\e[31mError :\e[0m No filesystem detected on $dev" 1>&2; exit 1; };
 		[ -d  "$path/$tardir" ] || { mkdir -p "$path/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to make directory \"$path/$tardir\"" 1>&2; exit 1; };
-		[ -n "$user" ] && { { chown "$user":"$user" "$path/$tardir" && chmod u+w,g+rx "$path/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to set permissions for directory \"$path/$tardir\"" 1>&2; exit 1; }; };
+		[ -n "$user" ] && { { chown "$user":"$user" "$path/$tardir" && chmod u=rwx,g=rx "$path/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to set permissions for directory \"$path/$tardir\"" 1>&2; exit 1; }; };
 		backup "$spath" "$path/$tardir"; tmp=$?
 		[ $tmp -eq 0 ] || { echo -e "\e[31mError :\e[0m During Backup" 1>&2; exit 1; };
 		;;
@@ -277,7 +280,7 @@ case $mode in
 		mount_dev "$uuid" "$mntpt"; tmp=$?
 		[ $tmp -eq 0 ] || { echo -e "\e[31mError :\e[0m Mounting device" 1>&2; exit $tmp; };
 		[ -d  "$mntpt/$tardir" ] || { mkdir -p "$mntpt/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to make directory \"$mntpt/$tardir\"" 1>&2; exit 1; };
-		[ -n "$user" ] && { { chown "$user":"$user" "$mntpt/$tardir" && chmod u+w,g+rx "$mntpt/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to set permissions for directory \"$mntpt/$tardir\"" 1>&2; exit 1; }; };
+		[ -n "$user" ] && { { chown "$user":"$user" "$mntpt/$tardir" && chmod u=rwx,g=rx "$mntpt/$tardir"; } || { echo -e "\e[31mError\e[0m : Failed to set permissions for directory \"$mntpt/$tardir\"" 1>&2; exit 1; }; };
 		backup "$spath" "$mntpt/$tardir"; tmp=$?
 		[ $tmp -eq 0 ] || { echo -e "\e[31mError :\e[0m During Backup" 1>&2; exit 1; };
 		[ $umnt -eq 1 ] && { sleep 1; umount_dev; tmp=$?;
