@@ -164,10 +164,12 @@ if [ -n "$prompt" ]; then
 		[ -n "$reportuser" ] && xdg_runtime_dir="/run/user/$(id -u "$reportuser")" || xdg_runtime_dir="run/user/$(id -u)"
 		[ -d "$xdg_runtime_dir" ] || { echo -e "\e[31mError\e[0m: xdg runtime directory not found"; exit 1; };
 		if [ -n "$reportuser" ]; then
-			sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_runtime_dir" kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg"
+			sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_runtime_dir" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
+				kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg\npress continue to start backup"
 			retcode=$?
 		else
-			env XDG_RUNTIME_DIR="$xdg_runtime_dir" kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg.\npress continue to start backup."
+			env XDG_RUNTIME_DIR="$xdg_runtime_dir" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
+				kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg.\npress continue to start backup."
 			retcode=$?
 		fi
 		[ $retcode -ne 0 ] && exit 2;
@@ -181,7 +183,8 @@ fi
 if [ -n "$reportuser" ]; then
 	function message {
 		local xdg_dir="/run/user/$(id -u "$reportuser")";
-		sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_dir" kdialog --title "$1" --passivepopup "$2" 10 &
+		sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_dir" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true \
+			kdialog --title "$1" --passivepopup "$2" 10 &
 	}
 else
 	function message {
