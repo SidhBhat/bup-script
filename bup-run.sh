@@ -178,16 +178,8 @@ fi
 
 if [ -n "$reportuser" ]; then
 	function message {
-		#[ -z "$reportuser" ] && { kdialog --title "$1" --passivepopup "$2" 5; return $?; };
-		#sudo -nu "$reportuser" bash -c 'env XAUTHORITY=$XAUTHORITY DISPLAY=$DISPLAY dbus-launch kdialog --title "$1" --passivepopup "$2" 5'
-		#sudo -E -nuu "$reportuser" bash -c ' echo $XDG_RUNTIME_DIR'
-		[ -n "$reportuser" ] && {
-			local xdg_dir="/run/user/$(id -u "$reportuser")";
-			sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_dir" kdialog --title "$1" --passivepopup "$2" 10 &
-		} || {
-			local xdg_dir="/run/user/$(id -u)";
-			env XDG_RUNTIME_DIR="$xdg_dir" kdialog --title "$1" --passivepopup "$2" 10 &
-		};
+		local xdg_dir="/run/user/$(id -u "$reportuser")";
+		sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_dir" kdialog --title "$1" --passivepopup "$2" 10 &
 	}
 else
 	function message {
