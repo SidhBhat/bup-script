@@ -57,7 +57,7 @@ if [[ "$status_report" == "true" ]]; then
 else
 	"/home/$user/.local/bin/bup-run.sh" --directory="/home/$user" \
         	--target-dir="$dir" --mountpoint="$mountpoint" --unmount \
-        	--prompt cli  "$dev" 2>/tmp/backup-script-error.log
+        	--prompt cli  "$dev"
 	code=$?
 fi
 
