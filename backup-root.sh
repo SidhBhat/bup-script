@@ -21,7 +21,7 @@ status_report="true"
 dev=$(lsblk -no UUID,PATH | awk "/^$uuid/ { print \$NF } ")
 [[ -z "$mountpoint" ]] && mountpoint="/mnt"
 [[ -z "$dir" ]] && dir="bup/"
-[[ -n "$status_report" ]] && gui="true"
+[[ "$status_report" == "true" ]] && gui="true"
 
 if [[ -z "$uuid" ]]; then
 	echo "uuid=\"$uuid\" is empty" 1>&2;
