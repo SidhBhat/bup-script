@@ -20,8 +20,6 @@
 
 #Filesystem UUID of external device
 uuid="e7d5d3ec-c60c-49f9-b6a0-259a751b5bca"
-#user whose directiry is to be backed up
-user="siddharthbhat"
 #mountpoint of external device. overriden by fstab
 mountpoint="/home/backup"
 #directory where bachup should be stored. cannot be empty
@@ -32,6 +30,11 @@ gui="true"
 status_report="true"
 
 #configuratuin end
+
+#user whose directory is to be backed up
+#requres root permission to be set to any other user that is nt the current user...
+#use basckup-root.sh instead as it is optimised to run as root.
+user="$(id -nu)"
 
 
 dev=$(lsblk -no UUID,PATH | awk "/^$uuid/ { print \$NF } ")
@@ -54,6 +57,7 @@ if [[ "$status_report" == "true" ]]; then
 		--target-dir="$dir" --mountpoint="$mountpoint" --unmount \
 		--prompt gui  --report="$user" "$dev" 2>/tmp/backup-script-error.log
 	code=$?
+	chmod a+r /tmp/backup-script-error.log
 else
 	"/home/$user/.local/bin/bup-run.sh" --directory="/home/$user" \
         	--target-dir="$dir" --mountpoint="$mountpoint" --unmount \
@@ -61,14 +65,18 @@ else
 	code=$?
 fi
 
-[ $code -ne 0 ] && {
+if [ $code -ne 0 ]; then
 	echo "non zero exit code : $code" 1>&2;
 	if [ "$gui" == "true" ]; then
-		sudo -nu "$user" env DISPLAY=":0" XDG_RUNTIME_DIR="/run/user/$(id -u "$user")" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
+		env DISPLAY=":0" XDG_RUNTIME_DIR="/run/user/$(id -u "$user")" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
 			kdialog --title "Backup Script" --sorry \
 			"Script returned with non zero exit status $code\nPlease check \"/tmp/backup-script-error.log\" for details." &
-		chmod a+r /tmp/backup-script-error.log;
 	fi
-};
-
+else
+	if [ "$gui" == "true" ]; then
+		env DISPLAY=":0" XDG_RUNTIME_DIR="/run/user/$(id -u "$user")" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
+			kdialog --title "Backup Script" --msgbox \
+			"Script returned with exit status $code\nSuccessfully finished backing up!" &
+	fi
+fi
 exit $code

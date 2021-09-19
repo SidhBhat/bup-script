@@ -34,10 +34,15 @@ fi
 [ -x "/home/$user/.local/bin/bup-run.sh" ] || { echo "bup-run.sh not executable" 1>&2; exit 1; };
 
 if [ "$status_report" == "true" ]; then
+	rm -f /tmp/backup-script-error.log
+
 	env DISPLAY=":0" "/home/$user/.local/bin/bup-run.sh" --directory="/home/$user" \
 		--target-dir="$dir" --mountpoint="$mountpoint" --unmount \
 		--prompt gui  --user="$user" --report="$user" "$dev" 2>/tmp/backup-script-error.log
 	code=$?
+
+	chown "$user":"$user" /tmp/backup-script-error.log
+	chmod a+r /tmp/backup-script-error.log
 else
 	"/home/$user/.local/bin/bup-run.sh" --directory="/home/$user" \
 	        --target-dir="$dir" --mountpoint="$mountpoint" --unmount \
@@ -45,15 +50,19 @@ else
 	code=$?
 fi
 
-[ $code -ne 0 ] && {
+if [ $code -ne 0 ]; then
 	echo "non zero exit code : $code" 1>&2;
 	if [ "$gui" == "true" ]; then
 		sudo -nu "$user" env DISPLAY=":0" XDG_RUNTIME_DIR="/run/user/$(id -u "$user")" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
 			kdialog --title "Backup Script" --sorry \
 			"Script returned with non zero exit status $code\nPlease check \"/tmp/backup-script-error.log\" for details." &
-		chown "$user":"$user" /tmp/backup-script-error.log;
-		chmod a+r /tmp/backup-script-error.log;
 	fi
-};
+else
+	if [ "$gui" == "true" ]; then
+		sudo -nu "$user" env DISPLAY=":0" XDG_RUNTIME_DIR="/run/user/$(id -u "$user")" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
+			kdialog --title "Backup Script" --sorry \
+			"Script returned with exit status $code\nSuccessfully finished backing up!" &
+	fi
+fi
 
 exit $code
