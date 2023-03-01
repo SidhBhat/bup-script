@@ -172,7 +172,7 @@ if [ -n "$prompt" ]; then
 				kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg.\npress continue to start backup."
 			retcode=$?
 		fi
-		[ $retcode -ne 0 ] && exit 2;
+		[ $retcode -ne 0 ] && exit 132;
 
 		unset retcode
 		unset xdg_runtime_dir
@@ -256,11 +256,12 @@ function restore_msg {
 
 function backup { #arg1 == directory to backup, arg2 == directory to store backup
 	local dir="Backup-$(date +'%Y')"
+	[ -f ~/.config/bup-backup-scriptrc ] || touch ~/.config/bup-backup-scriptrc
 	[ -d "$2" ] && BUP_DIR="$2" || return 1;
 	message "Backup Script" "Backup Started"
 	[ -d "$BUP_DIR/$dir" ] || { $exec_as_user mkdir "$BUP_DIR/$dir"; $exec_backup bup -d "$BUP_DIR/$dir" init 2>/dev/null; } || exit 100
 	[ -d "$1" ] &&
-	  { echo -e "\e[34mIndexing....\e[0m"; $exec_backup bup -d "$BUP_DIR/$dir" index -ux "$1" || exit 101; } || return 2;
+	  { echo -e "\e[34mIndexing....\e[0m"; $exec_backup bup -d "$BUP_DIR/$dir" index -ux --exclude-from="$HOME/.config/bup-backup-scriptrc"  "$1" || exit 101; } || return 2;
 	echo -e "\e[34mBacking up....\e[0m"
 	$exec_backup bup -d "$BUP_DIR/$dir" save -c --name "$(date +'bup-%B-%Y')" "$1" || exit 102
 	printf "bup " > "$BUP_DIR/$dir/"version.txt &&  bup --version >> "$BUP_DIR/$dir/"version.txt
