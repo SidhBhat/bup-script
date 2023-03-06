@@ -56,7 +56,7 @@ bup-run.sh --help
 ## Planned Improvements
 
  - Remove the `--prompt` option. This is a remnant from [bup-script-wrapper](https://github.com/SidhBhat/bup-script-wrapper).
-   This script should focus only on the backup process[^1].
+   This script should focus only on the backup process[^1]. (Resloved!!)
  - Comments!, we need comments in code! I wrote this script a couple of years ago[^2], and than I had no idea this
    project would grow as complicated or that it would have general functionality.
 

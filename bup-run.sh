@@ -41,7 +41,6 @@ while true; do
 		echo -e "  --report=<user>\t\tDisplay a graphical popup at a sesstion of <user>"
 		echo -e "\t\t\t\t  during and after backup is complete(useful if running in background)"
 		echo -e "  --user=<user>\t\t\tbackup as <user> (requires superuser previlages)"
-		echo -e "  --prompt=<option>\t\tConfirm before backing up"
 		echo -e "\t\t\t\t  The available options are \"gui\" and \"tui\" or \"cli\""
 		exit 0
 		shift
@@ -89,11 +88,6 @@ while true; do
 		  { echo -e "\e[31mError\e[0m: Current User must be root to execute as \"$1\"" 1>&2; exit 1; };
 		shift
 		;;
-	  --prompt)
-		shift
-		[ "$1" == "gui" ] && prompt="gui" || { [ "$1" == "cli" ] || [ "$1" == "tui" ] && prompt="tui"; } && shift || {
-			echo "\e[31mError\e[0m:Unrecognized prompt option \"$1\""; exit 1; };
-		;;
 	  --)
 		shift
 		break
@@ -138,47 +132,6 @@ spath="$(expand_link "$spath")"
 	exec_backup="$exec_as_user env -C $($exec_as_user bash -c 'printf "%s" "$HOME"')";
 };
 
-if [ -n "$prompt" ]; then
-	if [ "$prompt" == "tui" ]; then
-		if [ $mode -eq 1 ]; then
-			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')"
-		elif [ $mode -eq 2 ]; then
-			printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')"
-		else
-			echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1;
-		fi
-		read tmpvar;
-		while [ "$tmpvar" != "y" ] && [ "$tmpvar" != "n" ]; do
-				printf "please enter 'y' or 'n' :"
-				read tmpvar
-		done;
-		[ "$tmpvar" == "n" ] && exit 2 || unset tmpvar;
-	elif [ "$prompt" == "gui" ]; then
-		if [ $mode -eq 1 ]; then
-			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$path/$tardir" | tr -s '/')")"
-		elif [ $mode -eq 2 ]; then
-			strmsg="$(printf "Start backup of %s to %s\ncontinue? (y/n):" "$spath" "$(printf "$mntpt/$tardir" | tr -s '/')")"
-		else
-			echo -e "\e[31mError\e[0m: unkown mode!" 1>&2; exit 1;
-		fi
-		[ -n "$reportuser" ] && xdg_runtime_dir="/run/user/$(id -u "$reportuser")" || xdg_runtime_dir="run/user/$(id -u)"
-		[ -d "$xdg_runtime_dir" ] || { echo -e "\e[31mError\e[0m: xdg runtime directory not found"; exit 1; };
-		if [ -n "$reportuser" ]; then
-			sudo -nu "$reportuser" env XDG_RUNTIME_DIR="$xdg_runtime_dir" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
-				kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg\npress continue to start backup"
-			retcode=$?
-		else
-			env XDG_RUNTIME_DIR="$xdg_runtime_dir" KDE_SESSION_VERSION=5 KDE_FULL_SESSION=true dbus-launch \
-				kdialog --title "Backup Confirmation" --dontagain backupscript:promptconfirm --warningcontinuecancel "$strmsg.\npress continue to start backup."
-			retcode=$?
-		fi
-		[ $retcode -ne 0 ] && exit 132;
-
-		unset retcode
-		unset xdg_runtime_dir
-		unset strmsg
-	fi
-fi
 
 if [ -n "$reportuser" ]; then
 	function message {
@@ -256,15 +209,18 @@ function restore_msg {
 
 function backup { #arg1 == directory to backup, arg2 == directory to store backup
 	local dir="Backup-$(date +'%Y')"
-	[ -f ~/.config/bup-backup-scriptrc ] || touch ~/.config/bup-backup-scriptrc
+	local user_home=$($exec_as_user bash -c 'printf "%s" "$HOME"')
+	local config_file="$user_home/.config/bup-backup-scriptrc"
+
+	[ -f "$config_file" ] || touch "$config_file"
 	[ -d "$2" ] && BUP_DIR="$2" || return 1;
 	message "Backup Script" "Backup Started"
 	[ -d "$BUP_DIR/$dir" ] || { $exec_as_user mkdir "$BUP_DIR/$dir"; $exec_backup bup -d "$BUP_DIR/$dir" init 2>/dev/null; } || exit 100
 	[ -d "$1" ] &&
-	  { echo -e "\e[34mIndexing....\e[0m"; $exec_backup bup -d "$BUP_DIR/$dir" index -ux --exclude-from="$HOME/.config/bup-backup-scriptrc"  "$1" || exit 101; } || return 2;
+	  { echo -e "\e[34mIndexing....\e[0m"; $exec_backup bup -d "$BUP_DIR/$dir" index -ux --exclude-from="$config_file"  "$1" || exit 101; } || return 2;
 	echo -e "\e[34mBacking up....\e[0m"
 	$exec_backup bup -d "$BUP_DIR/$dir" save -c --name "$(date +'bup-%B-%Y')" "$1" || exit 102
-	printf "bup " > "$BUP_DIR/$dir/"version.txt &&  bup --version >> "$BUP_DIR/$dir/"version.txt
+	printf "bup " > "$BUP_DIR/$dir/"version.txt &&  bup --version 2>> "$BUP_DIR/$dir/"version.txt
 	git --version >> "$BUP_DIR/$dir/"version.txt
 	restore_msg > "$BUP_DIR/$dir/"restore.txt
 	chown "$user":"$user" "$BUP_DIR/$dir/"restore.txt "$BUP_DIR/$dir/"version.txt
